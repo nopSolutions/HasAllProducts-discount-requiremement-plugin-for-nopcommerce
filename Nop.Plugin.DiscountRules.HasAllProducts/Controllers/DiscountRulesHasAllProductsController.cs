@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Web.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using Nop.Core;
 using Nop.Core.Domain.Catalog;
 using Nop.Core.Domain.Discounts;
@@ -14,13 +14,16 @@ using Nop.Services.Localization;
 using Nop.Services.Security;
 using Nop.Services.Stores;
 using Nop.Services.Vendors;
+using Nop.Web.Framework;
 using Nop.Web.Framework.Controllers;
 using Nop.Web.Framework.Kendoui;
-using Nop.Web.Framework.Security;
+using Nop.Web.Framework.Mvc.Filters;
+using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace Nop.Plugin.DiscountRules.HasAllProducts.Controllers
 {
-    [AdminAuthorize]
+    [AuthorizeAdmin]
+    [Area(AreaNames.Admin)]
     public class DiscountRulesHasAllProductsController : BasePluginController
     {
         private readonly IDiscountService _discountService;
@@ -57,7 +60,7 @@ namespace Nop.Plugin.DiscountRules.HasAllProducts.Controllers
             this._productService = productService;
         }
 
-        public ActionResult Configure(int discountId, int? discountRequirementId)
+        public IActionResult Configure(int discountId, int? discountRequirementId)
         {
             if (!_permissionService.Authorize(StandardPermissionProvider.ManageDiscounts))
                 return Content("Access denied");
@@ -73,22 +76,24 @@ namespace Nop.Plugin.DiscountRules.HasAllProducts.Controllers
                     return Content("Failed to load requirement.");
             }
 
-            var restrictedProductIds = _settingService.GetSettingByKey<string>(string.Format("DiscountRequirement.RestrictedProductIds-{0}", discountRequirementId.HasValue ? discountRequirementId.Value : 0));
+            var restrictedProductIds = _settingService.GetSettingByKey<string>($"DiscountRequirement.RestrictedProductIds-{discountRequirementId ?? 0}");
 
-            var model = new RequirementModel();
-            model.RequirementId = discountRequirementId.HasValue ? discountRequirementId.Value : 0;
-            model.DiscountId = discountId;
-            model.Products = restrictedProductIds;
+            var model = new RequirementModel
+            {
+                RequirementId = discountRequirementId ?? 0,
+                DiscountId = discountId,
+                Products = restrictedProductIds
+            };
 
             //add a prefix
-            ViewData.TemplateInfo.HtmlFieldPrefix = string.Format("DiscountRulesHasAllProducts{0}", discountRequirementId.HasValue ? discountRequirementId.Value.ToString() : "0");
+            ViewData.TemplateInfo.HtmlFieldPrefix = $"DiscountRulesHasAllProducts{discountRequirementId?.ToString() ?? "0"}";
 
             return View("~/Plugins/DiscountRules.HasAllProducts/Views/Configure.cshtml", model);
         }
 
         [HttpPost]
         [AdminAntiForgery]
-        public ActionResult Configure(int discountId, int? discountRequirementId, string productIds)
+        public IActionResult Configure(int discountId, int? discountRequirementId, string productIds)
         {
             if (!_permissionService.Authorize(StandardPermissionProvider.ManageDiscounts))
                 return Content("Access denied");
@@ -104,7 +109,7 @@ namespace Nop.Plugin.DiscountRules.HasAllProducts.Controllers
             if (discountRequirement != null)
             {
                 //update existing rule
-                _settingService.SetSetting(string.Format("DiscountRequirement.RestrictedProductIds-{0}", discountRequirement.Id), productIds);
+                _settingService.SetSetting($"DiscountRequirement.RestrictedProductIds-{discountRequirement.Id}", productIds);
             }
             else
             {
@@ -116,19 +121,21 @@ namespace Nop.Plugin.DiscountRules.HasAllProducts.Controllers
                 discount.DiscountRequirements.Add(discountRequirement);
                 _discountService.UpdateDiscount(discount);
 
-                _settingService.SetSetting(string.Format("DiscountRequirement.RestrictedProductIds-{0}", discountRequirement.Id), productIds);
+                _settingService.SetSetting($"DiscountRequirement.RestrictedProductIds-{discountRequirement.Id}", productIds);
             }
-            return Json(new { Result = true, NewRequirementId = discountRequirement.Id }, JsonRequestBehavior.AllowGet);
+            return Json(new { Result = true, NewRequirementId = discountRequirement.Id });
         }
 
-        public ActionResult ProductAddPopup(string btnId, string productIdsInput)
+        public IActionResult ProductAddPopup(string btnId, string productIdsInput)
         {
             if (!_permissionService.Authorize(StandardPermissionProvider.ManageProducts))
                 return Content("Access denied");
 
-            var model = new RequirementModel.AddProductModel();
-            //a vendor should have access only to his products
-            model.IsLoggedInAsVendor = _workContext.CurrentVendor != null;
+            var model = new RequirementModel.AddProductModel
+            {
+                //a vendor should have access only to his products
+                IsLoggedInAsVendor = _workContext.CurrentVendor != null
+            };
 
             //categories
             model.AvailableCategories.Add(new SelectListItem { Text = _localizationService.GetResource("Admin.Common.All"), Value = "0" });
@@ -164,7 +171,7 @@ namespace Nop.Plugin.DiscountRules.HasAllProducts.Controllers
 
         [HttpPost]
         [AdminAntiForgery]
-        public ActionResult ProductAddPopupList(DataSourceRequest command, RequirementModel.AddProductModel model)
+        public IActionResult ProductAddPopupList(DataSourceRequest command, RequirementModel.AddProductModel model)
         {
             if (!_permissionService.Authorize(StandardPermissionProvider.ManageProducts))
                 return Content("Access denied");
@@ -199,49 +206,47 @@ namespace Nop.Plugin.DiscountRules.HasAllProducts.Controllers
         }
 
         [HttpPost]
-        [ValidateInput(false)]
         [AdminAntiForgery]
-        public ActionResult LoadProductFriendlyNames(string productIds)
+        public IActionResult LoadProductFriendlyNames(string productIds)
         {
             var result = "";
 
             if (!_permissionService.Authorize(StandardPermissionProvider.ManageProducts))
                 return Json(new { Text = result });
 
-            if (!String.IsNullOrWhiteSpace(productIds))
+            if (string.IsNullOrWhiteSpace(productIds))
+                return Json(new {Text = result});
+
+            var ids = new List<int>();
+            var rangeArray = productIds
+                .Split(new [] { ',' }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(x => x.Trim())
+                .ToList();
+
+            //we support three ways of specifying products:
+            //1. The comma-separated list of product identifiers (e.g. 77, 123, 156).
+            //2. The comma-separated list of product identifiers with quantities.
+            //      {Product ID}:{Quantity}. For example, 77:1, 123:2, 156:3
+            //3. The comma-separated list of product identifiers with quantity range.
+            //      {Product ID}:{Min quantity}-{Max quantity}. For example, 77:1-3, 123:2-5, 156:3-8
+            foreach (var str1 in rangeArray)
             {
-                var ids = new List<int>();
-                var rangeArray = productIds
-                    .Split(new [] { ',' }, StringSplitOptions.RemoveEmptyEntries)
-                    .Select(x => x.Trim())
-                    .ToList();
+                var str2 = str1;
+                //we do not display specified quantities and ranges
+                //so let's parse only product names (before : sign)
+                if (str2.Contains(":"))
+                    str2 = str2.Substring(0, str2.IndexOf(":"));
 
-                //we support three ways of specifying products:
-                //1. The comma-separated list of product identifiers (e.g. 77, 123, 156).
-                //2. The comma-separated list of product identifiers with quantities.
-                //      {Product ID}:{Quantity}. For example, 77:1, 123:2, 156:3
-                //3. The comma-separated list of product identifiers with quantity range.
-                //      {Product ID}:{Min quantity}-{Max quantity}. For example, 77:1-3, 123:2-5, 156:3-8
-                foreach (string str1 in rangeArray)
-                {
-                    var str2 = str1;
-                    //we do not display specified quantities and ranges
-                    //so let's parse only product names (before : sign)
-                    if (str2.Contains(":"))
-                        str2 = str2.Substring(0, str2.IndexOf(":"));
+                if (int.TryParse(str2, out int tmp1))
+                    ids.Add(tmp1);
+            }
 
-                    int tmp1;
-                    if (int.TryParse(str2, out tmp1))
-                        ids.Add(tmp1);
-                }
-
-                var products = _productService.GetProductsByIds(ids.ToArray());
-                for (int i = 0; i <= products.Count - 1; i++)
-                {
-                    result += products[i].Name;
-                    if (i != products.Count - 1)
-                        result += ", ";
-                }
+            var products = _productService.GetProductsByIds(ids.ToArray());
+            for (var i = 0; i <= products.Count - 1; i++)
+            {
+                result += products[i].Name;
+                if (i != products.Count - 1)
+                    result += ", ";
             }
 
             return Json(new { Text = result });

@@ -1,34 +1,30 @@
-﻿using System.Web.Mvc;
-using System.Web.Routing;
-using Nop.Web.Framework.Mvc.Routes;
+﻿using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Routing;
+using Nop.Web.Framework.Mvc.Routing;
 
 namespace Nop.Plugin.DiscountRules.HasAllProducts
 {
     public partial class RouteProvider : IRouteProvider
     {
-        public void RegisterRoutes(RouteCollection routes)
+        public void RegisterRoutes(IRouteBuilder routeBuilder)
         {
-            routes.MapRoute("Plugin.DiscountRules.HasAllProducts.Configure",
-                 "Plugins/DiscountRulesHasAllProducts/Configure",
-                 new { controller = "DiscountRulesHasAllProducts", action = "Configure" },
-                 new[] { "Nop.Plugin.DiscountRules.HasAllProducts.Controllers" }
-            );
-            routes.MapRoute("Plugin.DiscountRules.HasAllProducts.ProductAddPopup",
-                 "Plugins/DiscountRulesHasAllProducts/ProductAddPopup",
-                 new { controller = "DiscountRulesHasAllProducts", action = "ProductAddPopup" },
-                 new[] { "Nop.Plugin.DiscountRules.HasAllProducts.Controllers" }
-            );
-            routes.MapRoute("Plugin.DiscountRules.HasAllProducts.ProductAddPopupList",
-                 "Plugins/DiscountRulesHasAllProducts/ProductAddPopupList",
-                 new { controller = "DiscountRulesHasAllProducts", action = "ProductAddPopupList" },
-                 new[] { "Nop.Plugin.DiscountRules.HasAllProducts.Controllers" }
-            );
-            routes.MapRoute("Plugin.DiscountRules.HasAllProducts.LoadProductFriendlyNames",
-                 "Plugins/DiscountRulesHasAllProducts/LoadProductFriendlyNames",
-                 new { controller = "DiscountRulesHasAllProducts", action = "LoadProductFriendlyNames" },
-                 new[] { "Nop.Plugin.DiscountRules.HasAllProducts.Controllers" }
-            );
+            routeBuilder.MapRoute("Plugin.DiscountRules.HasAllProducts.Configure",
+                "Plugins/DiscountRulesHasAllProducts/Configure",
+                new { controller = "DiscountRulesHasAllProducts", action = "Configure" });
+
+            routeBuilder.MapRoute("Plugin.DiscountRules.HasAllProducts.ProductAddPopup",
+                "Plugins/DiscountRulesHasAllProducts/ProductAddPopup",
+                new { controller = "DiscountRulesHasAllProducts", action = "ProductAddPopup" });
+
+            routeBuilder.MapRoute("Plugin.DiscountRules.HasAllProducts.ProductAddPopupList",
+                "Plugins/DiscountRulesHasAllProducts/ProductAddPopupList",
+                new { controller = "DiscountRulesHasAllProducts", action = "ProductAddPopupList" });
+
+            routeBuilder.MapRoute("Plugin.DiscountRules.HasAllProducts.LoadProductFriendlyNames",
+                "Plugins/DiscountRulesHasAllProducts/LoadProductFriendlyNames",
+                new { controller = "DiscountRulesHasAllProducts", action = "LoadProductFriendlyNames" });
         }
+
         public int Priority
         {
             get

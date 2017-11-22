@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
-using System.Web.Mvc;
-using Nop.Web.Framework;
-using Nop.Web.Framework.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
+using Nop.Web.Framework.Mvc.ModelBinding;
+using Nop.Web.Framework.Mvc.Models;
 
 namespace Nop.Plugin.DiscountRules.HasAllProducts.Models
 {
@@ -28,7 +28,6 @@ namespace Nop.Plugin.DiscountRules.HasAllProducts.Models
             }
 
             [NopResourceDisplayName("Admin.Catalog.Products.List.SearchProductName")]
-            [AllowHtml]
             public string SearchProductName { get; set; }
             [NopResourceDisplayName("Admin.Catalog.Products.List.SearchCategory")]
             public int SearchCategoryId { get; set; }
@@ -57,6 +56,7 @@ namespace Nop.Plugin.DiscountRules.HasAllProducts.Models
 
             public bool Published { get; set; }
         }
+
         #endregion
     }
 }
