@@ -42,7 +42,7 @@ namespace Nop.Plugin.DiscountRules.HasAllProducts.Controllers
             IPermissionService permissionService,
             IWorkContext workContext, 
             ILocalizationService localizationService,
-             ICategoryService categoryService, 
+            ICategoryService categoryService, 
             IManufacturerService manufacturerService,
             IStoreService storeService, 
             IVendorService vendorService,
@@ -141,7 +141,7 @@ namespace Nop.Plugin.DiscountRules.HasAllProducts.Controllers
             model.AvailableCategories.Add(new SelectListItem { Text = _localizationService.GetResource("Admin.Common.All"), Value = "0" });
             var categories = _categoryService.GetAllCategories(showHidden: true);
             foreach (var c in categories)
-                model.AvailableCategories.Add(new SelectListItem { Text = c.GetFormattedBreadCrumb(categories), Value = c.Id.ToString() });
+                model.AvailableCategories.Add(new SelectListItem { Text = _categoryService.GetFormattedBreadCrumb(c), Value = c.Id.ToString() });
 
             //manufacturers
             model.AvailableManufacturers.Add(new SelectListItem { Text = _localizationService.GetResource("Admin.Common.All"), Value = "0" });

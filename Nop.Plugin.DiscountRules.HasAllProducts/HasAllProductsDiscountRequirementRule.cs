@@ -17,14 +17,17 @@ namespace Nop.Plugin.DiscountRules.HasAllProducts
         private readonly ISettingService _settingService;
         private readonly IActionContextAccessor _actionContextAccessor;
         private readonly IUrlHelperFactory _urlHelperFactory;
+        private readonly ILocalizationService _localizationService;
 
         public HasAllProductsDiscountRequirementRule(ISettingService settingService,
             IActionContextAccessor actionContextAccessor,
-            IUrlHelperFactory urlHelperFactory)
+            IUrlHelperFactory urlHelperFactory,
+            ILocalizationService localizationService)
         {
             this._settingService = settingService;
             this._actionContextAccessor = actionContextAccessor;
             this._urlHelperFactory = urlHelperFactory;
+            this._localizationService = localizationService;
         }
 
         /// <summary>
@@ -170,20 +173,20 @@ namespace Nop.Plugin.DiscountRules.HasAllProducts
         public override void Install()
         {
             //locales
-            this.AddOrUpdatePluginLocaleResource("Plugins.DiscountRules.HasAllProducts.Fields.Products", "Restricted products [and quantity range]");
-            this.AddOrUpdatePluginLocaleResource("Plugins.DiscountRules.HasAllProducts.Fields.Products.Hint", "The comma-separated list of product identifiers (e.g. 77, 123, 156). You can find a product ID on its details page. You can also specify the comma-separated list of product identifiers with quantities ({Product ID}:{Quantity}. for example, 77:1, 123:2, 156:3). And you can also specify the comma-separated list of product identifiers with quantity range ({Product ID}:{Min quantity}-{Max quantity}. for example, 77:1-3, 123:2-5, 156:3-8).");
-            this.AddOrUpdatePluginLocaleResource("Plugins.DiscountRules.HasAllProducts.Fields.Products.AddNew", "Add product");
-            this.AddOrUpdatePluginLocaleResource("Plugins.DiscountRules.HasAllProducts.Fields.Products.Choose", "Choose");
+            _localizationService.AddOrUpdatePluginLocaleResource("Plugins.DiscountRules.HasAllProducts.Fields.Products", "Restricted products [and quantity range]");
+            _localizationService.AddOrUpdatePluginLocaleResource("Plugins.DiscountRules.HasAllProducts.Fields.Products.Hint", "The comma-separated list of product identifiers (e.g. 77, 123, 156). You can find a product ID on its details page. You can also specify the comma-separated list of product identifiers with quantities ({Product ID}:{Quantity}. for example, 77:1, 123:2, 156:3). And you can also specify the comma-separated list of product identifiers with quantity range ({Product ID}:{Min quantity}-{Max quantity}. for example, 77:1-3, 123:2-5, 156:3-8).");
+            _localizationService.AddOrUpdatePluginLocaleResource("Plugins.DiscountRules.HasAllProducts.Fields.Products.AddNew", "Add product");
+            _localizationService.AddOrUpdatePluginLocaleResource("Plugins.DiscountRules.HasAllProducts.Fields.Products.Choose", "Choose");
             base.Install();
         }
 
         public override void Uninstall()
         {
             //locales
-            this.DeletePluginLocaleResource("Plugins.DiscountRules.HasAllProducts.Fields.Products");
-            this.DeletePluginLocaleResource("Plugins.DiscountRules.HasAllProducts.Fields.Products.Hint");
-            this.DeletePluginLocaleResource("Plugins.DiscountRules.HasAllProducts.Fields.Products.AddNew");
-            this.DeletePluginLocaleResource("Plugins.DiscountRules.HasAllProducts.Fields.Products.Choose");
+            _localizationService.DeletePluginLocaleResource("Plugins.DiscountRules.HasAllProducts.Fields.Products");
+            _localizationService.DeletePluginLocaleResource("Plugins.DiscountRules.HasAllProducts.Fields.Products.Hint");
+            _localizationService.DeletePluginLocaleResource("Plugins.DiscountRules.HasAllProducts.Fields.Products.AddNew");
+            _localizationService.DeletePluginLocaleResource("Plugins.DiscountRules.HasAllProducts.Fields.Products.Choose");
             base.Uninstall();
         }
     }
