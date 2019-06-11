@@ -126,7 +126,7 @@ namespace Nop.Plugin.DiscountRules.HasAllProducts.Controllers
             ViewBag.productIdsInput = productIdsInput;
             ViewBag.btnId = btnId;
 
-            return View("~/Plugins/DiscountRules.HasOneProduct/Views/ProductAddPopup.cshtml", model);
+            return View("~/Plugins/DiscountRules.HasAllProducts/Views/ProductAddPopup.cshtml", model);
 
 
         }
