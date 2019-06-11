@@ -18,10 +18,10 @@ namespace Nop.Plugin.DiscountRules.HasAllProducts
         #region Fields
 
         private readonly IActionContextAccessor _actionContextAccessor;
+        private readonly ILocalizationService _localizationService;
         private readonly ISettingService _settingService;
         private readonly IShoppingCartService _shoppingCartService;
         private readonly IUrlHelperFactory _urlHelperFactory;
-        private readonly ILocalizationService _localizationService;
         private readonly IWebHelper _webHelper;
 
         #endregion
@@ -87,7 +87,9 @@ namespace Nop.Plugin.DiscountRules.HasAllProducts
             //group products in the cart by product ID
             //it could be the same product with distinct product attributes
             //that's why we get the total quantity of this product
-            var cart = _shoppingCartService.GetShoppingCart(customer: request.Customer, shoppingCartType: ShoppingCartType.ShoppingCart, storeId: request.Store.Id);
+            var cart = _shoppingCartService.GetShoppingCart(customer: request.Customer, shoppingCartType: ShoppingCartType.ShoppingCart, storeId: request.Store.Id)
+                .GroupBy(sci => sci.ProductId)
+                .Select(g => new { ProductId = g.Key, TotalQuantity = g.Sum(x => x.Quantity) });
 
             var allFound = true;
             foreach (var restrictedProduct in restrictedProducts)
@@ -114,7 +116,7 @@ namespace Nop.Plugin.DiscountRules.HasAllProducts
                                 //parsing error; exit;
                                 return result;
 
-                            if (sci.ProductId == restrictedProductId && quantityMin <= sci.Quantity && sci.Quantity <= quantityMax)
+                            if (sci.ProductId == restrictedProductId && quantityMin <= sci.TotalQuantity && sci.TotalQuantity <= quantityMax)
                             {
                                 found1 = true;
                                 break;
@@ -132,7 +134,7 @@ namespace Nop.Plugin.DiscountRules.HasAllProducts
                                 //parsing error; exit;
                                 return result;
 
-                            if (sci.ProductId == restrictedProductId && sci.Quantity == quantity)
+                            if (sci.ProductId == restrictedProductId && sci.TotalQuantity == quantity)
                             {
                                 found1 = true;
                                 break;

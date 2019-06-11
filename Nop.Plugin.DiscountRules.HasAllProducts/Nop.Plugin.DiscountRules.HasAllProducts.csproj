@@ -6,8 +6,8 @@
     <Company>Nop Solutions, Ltd</Company>
     <Authors>Nop Solutions, Ltd</Authors>
     <PackageLicenseUrl></PackageLicenseUrl>
-    <PackageProjectUrl>http://www.nopcommerce.com/</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/nopSolutions/nopCommerce</RepositoryUrl>
+    <PackageProjectUrl>https://www.nopcommerce.com/p/2704/has-all-products-discount-requirement-rule-nopcommerce-team.aspx</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/nopSolutions/HasAllProducts-discount-requiremement-plugin-for-nopcommerce</RepositoryUrl>
     <RepositoryType>Git</RepositoryType>
     <OutputPath>..\..\Presentation\Nop.Web\Plugins\DiscountRules.HasAllProducts</OutputPath>
     <OutDir>$(OutputPath)</OutDir>
@@ -22,6 +22,7 @@
     <None Remove="plugin.json" />
     <None Remove="Views\Configure.cshtml" />
     <None Remove="Views\ProductAddPopup.cshtml" />
+    <None Remove="Views\_ViewImport.cshtml" />
   </ItemGroup>
 
   <ItemGroup>
