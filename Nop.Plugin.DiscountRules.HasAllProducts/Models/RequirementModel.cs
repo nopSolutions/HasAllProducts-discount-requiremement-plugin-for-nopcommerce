@@ -7,7 +7,7 @@ namespace Nop.Plugin.DiscountRules.HasAllProducts.Models
         public int DiscountId { get; set; }
 
         [NopResourceDisplayName("Plugins.DiscountRules.HasAllProducts.Fields.Products")]
-        public string Products { get; set; }
+        public string ProductIds { get; set; }
 
         public int RequirementId { get; set; }
     }

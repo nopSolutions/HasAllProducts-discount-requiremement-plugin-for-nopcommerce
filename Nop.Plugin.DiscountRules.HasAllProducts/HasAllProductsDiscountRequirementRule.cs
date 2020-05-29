@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Infrastructure;
@@ -18,6 +19,7 @@ namespace Nop.Plugin.DiscountRules.HasAllProducts
         #region Fields
 
         private readonly IActionContextAccessor _actionContextAccessor;
+        private readonly IDiscountService _discountService;
         private readonly ILocalizationService _localizationService;
         private readonly ISettingService _settingService;
         private readonly IShoppingCartService _shoppingCartService;
@@ -29,6 +31,7 @@ namespace Nop.Plugin.DiscountRules.HasAllProducts
         #region Ctor
 
         public HasAllProductsDiscountRequirementRule(IActionContextAccessor actionContextAccessor,
+            IDiscountService discountService,
             ILocalizationService localizationService,
             ISettingService settingService,
             IShoppingCartService shoppingCartService,
@@ -36,6 +39,7 @@ namespace Nop.Plugin.DiscountRules.HasAllProducts
             IWebHelper webHelper)
         {
             _actionContextAccessor = actionContextAccessor;
+            _discountService = discountService;
             _localizationService = localizationService;
             _settingService = settingService;
             _shoppingCartService = shoppingCartService;
@@ -60,7 +64,7 @@ namespace Nop.Plugin.DiscountRules.HasAllProducts
             //invalid by default
             var result = new DiscountRequirementValidationResult();
 
-            var restrictedProductIds = _settingService.GetSettingByKey<string>($"DiscountRequirement.RestrictedProductIds-{request.DiscountRequirementId}");
+            var restrictedProductIds = _settingService.GetSettingByKey<string>(string.Format(DiscountRequirementDefaults.SettingsKey, request.DiscountRequirementId));
             if (string.IsNullOrWhiteSpace(restrictedProductIds))
             {
                 //valid
@@ -189,20 +193,33 @@ namespace Nop.Plugin.DiscountRules.HasAllProducts
         public override void Install()
         {
             //locales
-            _localizationService.AddOrUpdatePluginLocaleResource("Plugins.DiscountRules.HasAllProducts.Fields.Products", "Restricted products [and quantity range]");
-            _localizationService.AddOrUpdatePluginLocaleResource("Plugins.DiscountRules.HasAllProducts.Fields.Products.Hint", "The comma-separated list of product identifiers (e.g. 77, 123, 156). You can find a product ID on its details page. You can also specify the comma-separated list of product identifiers with quantities ({Product ID}:{Quantity}. for example, 77:1, 123:2, 156:3). And you can also specify the comma-separated list of product identifiers with quantity range ({Product ID}:{Min quantity}-{Max quantity}. for example, 77:1-3, 123:2-5, 156:3-8).");
-            _localizationService.AddOrUpdatePluginLocaleResource("Plugins.DiscountRules.HasAllProducts.Fields.Products.AddNew", "Add product");
-            _localizationService.AddOrUpdatePluginLocaleResource("Plugins.DiscountRules.HasAllProducts.Fields.Products.Choose", "Choose");
+            _localizationService.AddPluginLocaleResource(new Dictionary<string, string>
+            {
+                ["Plugins.DiscountRules.HasAllProducts.Fields.Products"] = "Restricted products [and quantity range]",
+                ["Plugins.DiscountRules.HasAllProducts.Fields.Products.Hint"] = "The comma-separated list of product identifiers (e.g. 77, 123, 156). You can find a product ID on its details page. You can also specify the comma-separated list of product identifiers with quantities ({Product ID}:{Quantity}. for example, 77:1, 123:2, 156:3). And you can also specify the comma-separated list of product identifiers with quantity range ({Product ID}:{Min quantity}-{Max quantity}. for example, 77:1-3, 123:2-5, 156:3-8).",
+                ["Plugins.DiscountRules.HasAllProducts.Fields.Products.AddNew"] = "Add product",
+                ["Plugins.DiscountRules.HasAllProducts.Fields.Products.Choose"] = "Choose",
+                ["Plugins.DiscountRules.HasAllProducts.Fields.ProductIds.Required"] = "Products are required",
+                ["Plugins.DiscountRules.HasAllProducts.Fields.ProductIds.InvalidFormat"] = "Invalid format of the products selection. Format should be comma-separated list of product identifiers (e.g. 77, 123, 156). You can find a product ID on its details page. You can also specify the comma-separated list of product identifiers with quantities ({Product ID}:{Quantity}. for example, 77:1, 123:2, 156:3). And you can also specify the comma-separated list of product identifiers with quantity range ({Product ID}:{Min quantity}-{Max quantity}. for example, 77:1-3, 123:2-5, 156:3-8).",
+                ["Plugins.DiscountRules.HasAllProducts.Fields.DiscountId.Required"] = "Discount is required"
+            });
+
             base.Install();
         }
 
         public override void Uninstall()
         {
+            //discount requirements
+            var discountRequirements = _discountService.GetAllDiscountRequirements()
+                .Where(discountRequirement => discountRequirement.DiscountRequirementRuleSystemName == DiscountRequirementDefaults.SystemName);
+            foreach (var discountRequirement in discountRequirements)
+            {
+                _discountService.DeleteDiscountRequirement(discountRequirement, false);
+            }
+
             //locales
-            _localizationService.DeletePluginLocaleResource("Plugins.DiscountRules.HasAllProducts.Fields.Products");
-            _localizationService.DeletePluginLocaleResource("Plugins.DiscountRules.HasAllProducts.Fields.Products.Hint");
-            _localizationService.DeletePluginLocaleResource("Plugins.DiscountRules.HasAllProducts.Fields.Products.AddNew");
-            _localizationService.DeletePluginLocaleResource("Plugins.DiscountRules.HasAllProducts.Fields.Products.Choose");
+            _localizationService.DeletePluginLocaleResources("Plugins.DiscountRules.HasAllProducts");
+
             base.Uninstall();
         }
 
