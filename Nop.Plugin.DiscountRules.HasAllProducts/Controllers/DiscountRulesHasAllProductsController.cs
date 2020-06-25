@@ -63,7 +63,7 @@ namespace Nop.Plugin.DiscountRules.HasAllProducts.Controllers
             if (discountRequirementId.HasValue && _discountService.GetDiscountRequirementById(discountRequirementId.Value) is null)
                 return Content("Failed to load requirement.");
 
-            var restrictedProductIds = _settingService.GetSettingByKey<string>(string.Format(DiscountRequirementDefaults.SettingsKey, discountRequirementId ?? 0));
+            var restrictedProductIds = _settingService.GetSettingByKey<string>(string.Format(DiscountRequirementDefaults.SETTINGS_KEY, discountRequirementId ?? 0));
 
             var model = new RequirementModel
             {
@@ -73,7 +73,7 @@ namespace Nop.Plugin.DiscountRules.HasAllProducts.Controllers
             };
 
             //add a prefix
-            ViewData.TemplateInfo.HtmlFieldPrefix = string.Format(DiscountRequirementDefaults.HtmlFieldPrefix, discountRequirementId ?? 0);
+            ViewData.TemplateInfo.HtmlFieldPrefix = string.Format(DiscountRequirementDefaults.HTML_FIELD_PREFIX, discountRequirementId ?? 0);
 
             return View("~/Plugins/DiscountRules.HasAllProducts/Views/Configure.cshtml", model);
         }
@@ -100,14 +100,14 @@ namespace Nop.Plugin.DiscountRules.HasAllProducts.Controllers
                     discountRequirement = new DiscountRequirement
                     {
                         DiscountId = discount.Id,
-                        DiscountRequirementRuleSystemName = DiscountRequirementDefaults.SystemName
+                        DiscountRequirementRuleSystemName = DiscountRequirementDefaults.SYSTEM_NAME
                     };
 
                     _discountService.InsertDiscountRequirement(discountRequirement);
                 }
 
                 //save restricted customer role identifier
-                _settingService.SetSetting(string.Format(DiscountRequirementDefaults.SettingsKey, discountRequirement.Id), model.ProductIds);
+                _settingService.SetSetting(string.Format(DiscountRequirementDefaults.SETTINGS_KEY, discountRequirement.Id), model.ProductIds);
 
                 return Ok(new { NewRequirementId = discountRequirement.Id });
             }
@@ -152,25 +152,21 @@ namespace Nop.Plugin.DiscountRules.HasAllProducts.Controllers
             //      {Product ID}:{Quantity}. For example, 77:1, 123:2, 156:3
             //3. The comma-separated list of product identifiers with quantity range.
             //      {Product ID}:{Min quantity}-{Max quantity}. For example, 77:1-3, 123:2-5, 156:3-8
-            foreach (var str1 in rangeArray)
+            foreach (var productQuantityPair in rangeArray)
             {
-                var str2 = str1;
+                var temp = productQuantityPair;
+
                 //we do not display specified quantities and ranges
                 //so let's parse only product names (before : sign)
-                if (str2.Contains(":"))
-                    str2 = str2.Substring(0, str2.IndexOf(":"));
+                if (productQuantityPair.Contains(":"))
+                    temp = productQuantityPair.Split(new[] { ':' }, StringSplitOptions.RemoveEmptyEntries)[0];
 
-                if (int.TryParse(str2, out var tmp1))
-                    ids.Add(tmp1);
+                if (int.TryParse(temp, out var productId))
+                    ids.Add(productId);
             }
 
             var products = _productService.GetProductsByIds(ids.ToArray());
-            for (var i = 0; i <= products.Count - 1; i++)
-            {
-                result += products[i].Name;
-                if (i != products.Count - 1)
-                    result += ", ";
-            }
+            result = string.Join(", ", products.Select(p => p.Name));
 
             return Json(new { Text = result });
         }
