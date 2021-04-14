@@ -2,7 +2,7 @@
 
 namespace Nop.Plugin.DiscountRules.HasAllProducts.Models
 {
-    public class RequirementModel
+    public record RequirementModel
     {
         public int DiscountId { get; set; }
 

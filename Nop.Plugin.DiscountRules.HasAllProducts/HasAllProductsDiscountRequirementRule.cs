@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Microsoft.AspNetCore.Mvc.Routing;
@@ -55,8 +56,11 @@ namespace Nop.Plugin.DiscountRules.HasAllProducts
         /// Check discount requirement
         /// </summary>
         /// <param name="request">Object that contains all information required to check the requirement (Current customer, discount, etc)</param>
-        /// <returns>Result</returns>
-        public DiscountRequirementValidationResult CheckRequirement(DiscountRequirementValidationRequest request)
+        /// <returns>
+        /// A task that represents the asynchronous operation
+        /// The task result contains the result
+        /// </returns>
+        public async Task<DiscountRequirementValidationResult> CheckRequirementAsync(DiscountRequirementValidationRequest request)
         {
             if (request == null)
                 throw new ArgumentNullException(nameof(request));
@@ -64,7 +68,7 @@ namespace Nop.Plugin.DiscountRules.HasAllProducts
             //invalid by default
             var result = new DiscountRequirementValidationResult();
 
-            var restrictedProductIds = _settingService.GetSettingByKey<string>(string.Format(DiscountRequirementDefaults.SETTINGS_KEY, request.DiscountRequirementId));
+            var restrictedProductIds = await _settingService.GetSettingByKeyAsync<string>(string.Format(DiscountRequirementDefaults.SETTINGS_KEY, request.DiscountRequirementId));
             if (string.IsNullOrWhiteSpace(restrictedProductIds))
             {
                 //valid
@@ -91,7 +95,7 @@ namespace Nop.Plugin.DiscountRules.HasAllProducts
             //group products in the cart by product ID
             //it could be the same product with distinct product attributes
             //that's why we get the total quantity of this product
-            var cart = _shoppingCartService.GetShoppingCart(customer: request.Customer, shoppingCartType: ShoppingCartType.ShoppingCart, storeId: request.Store.Id)
+            var cart = (await _shoppingCartService.GetShoppingCartAsync(customer: request.Customer, shoppingCartType: ShoppingCartType.ShoppingCart, storeId: request.Store.Id))
                 .GroupBy(sci => sci.ProductId)
                 .Select(g => new { ProductId = g.Key, TotalQuantity = g.Sum(x => x.Quantity) });
 
@@ -187,13 +191,17 @@ namespace Nop.Plugin.DiscountRules.HasAllProducts
             var urlHelper = _urlHelperFactory.GetUrlHelper(_actionContextAccessor.ActionContext);
 
             return urlHelper.Action("Configure", "DiscountRulesHasAllProducts",
-                new { discountId = discountId, discountRequirementId = discountRequirementId }, _webHelper.CurrentRequestProtocol);
+                new { discountId = discountId, discountRequirementId = discountRequirementId }, _webHelper.GetCurrentRequestProtocol());
         }
 
-        public override void Install()
+        /// <summary>
+        /// Install the plugin
+        /// </summary>
+        /// <returns>A task that represents the asynchronous operation</returns>
+        public override async Task InstallAsync()
         {
             //locales
-            _localizationService.AddPluginLocaleResource(new Dictionary<string, string>
+            await _localizationService.AddLocaleResourceAsync(new Dictionary<string, string>
             {
                 ["Plugins.DiscountRules.HasAllProducts.Fields.Products"] = "Restricted products [and quantity range]",
                 ["Plugins.DiscountRules.HasAllProducts.Fields.Products.Hint"] = "The comma-separated list of product identifiers (e.g. 77, 123, 156). You can find a product ID on its details page. You can also specify the comma-separated list of product identifiers with quantities ({Product ID}:{Quantity}. for example, 77:1, 123:2, 156:3). And you can also specify the comma-separated list of product identifiers with quantity range ({Product ID}:{Min quantity}-{Max quantity}. for example, 77:1-3, 123:2-5, 156:3-8).",
@@ -204,23 +212,27 @@ namespace Nop.Plugin.DiscountRules.HasAllProducts
                 ["Plugins.DiscountRules.HasAllProducts.Fields.DiscountId.Required"] = "Discount is required"
             });
 
-            base.Install();
+            await base.InstallAsync();
         }
 
-        public override void Uninstall()
+        /// <summary>
+        /// Uninstall the plugin
+        /// </summary>
+        /// <returns>A task that represents the asynchronous operation</returns>
+        public override async Task UninstallAsync()
         {
             //discount requirements
-            var discountRequirements = _discountService.GetAllDiscountRequirements()
+            var discountRequirements = (await _discountService.GetAllDiscountRequirementsAsync())
                 .Where(discountRequirement => discountRequirement.DiscountRequirementRuleSystemName == DiscountRequirementDefaults.SYSTEM_NAME);
             foreach (var discountRequirement in discountRequirements)
             {
-                _discountService.DeleteDiscountRequirement(discountRequirement, false);
+                await _discountService.DeleteDiscountRequirementAsync(discountRequirement, false);
             }
 
             //locales
-            _localizationService.DeletePluginLocaleResources("Plugins.DiscountRules.HasAllProducts");
+            await _localizationService.DeleteLocaleResourcesAsync("Plugins.DiscountRules.HasAllProducts");
 
-            base.Uninstall();
+            await base.UninstallAsync();
         }
 
         #endregion
