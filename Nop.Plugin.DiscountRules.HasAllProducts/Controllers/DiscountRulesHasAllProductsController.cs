@@ -20,13 +20,13 @@ public class DiscountRulesHasAllProductsController : BasePluginController
 {
     #region Fields
 
+    private const char _idsSeparator = ',';
+    private const char _productQuantityPairSeparator = ':';
     private readonly IDiscountService _discountService;
     private readonly IPermissionService _permissionService;
     private readonly IProductModelFactory _productModelFactory;
     private readonly IProductService _productService;
     private readonly ISettingService _settingService;
-    private static readonly char[] _idsSeparator = [','];
-    private static readonly char[] _productQuantityPairSeparator = [':'];
 
     #endregion
 
@@ -47,13 +47,20 @@ public class DiscountRulesHasAllProductsController : BasePluginController
 
     #endregion
 
+    #region Utilities
+
+    private IEnumerable<string> GetErrorsFromModelState()
+    {
+        return ModelState.Values.SelectMany(v => v.Errors.Select(e => e.ErrorMessage));
+    }
+
+    #endregion
+
     #region Methods
 
+    [CheckPermission(StandardPermission.Promotions.DISCOUNTS_VIEW)]
     public async Task<IActionResult> Configure(int discountId, int? discountRequirementId)
     {
-        if (!await _permissionService.AuthorizeAsync(StandardPermissionProvider.ManageDiscounts))
-            return Content("Access denied");
-
         var discount = await _discountService.GetDiscountByIdAsync(discountId) ?? throw new ArgumentException("Discount could not be loaded");
 
         //check whether the discount requirement exists
@@ -76,11 +83,9 @@ public class DiscountRulesHasAllProductsController : BasePluginController
     }
 
     [HttpPost]
+    [CheckPermission(StandardPermission.Promotions.DISCOUNTS_CREATE_EDIT_DELETE)]
     public async Task<IActionResult> Configure(RequirementModel model)
     {
-        if (!await _permissionService.AuthorizeAsync(StandardPermissionProvider.ManageDiscounts))
-            return Content("Access denied");
-
         if (ModelState.IsValid)
         {
             //load the discount
@@ -112,11 +117,9 @@ public class DiscountRulesHasAllProductsController : BasePluginController
         return BadRequest(new { Errors = GetErrorsFromModelState() });
     }
 
+    [CheckPermission(StandardPermission.Catalog.PRODUCTS_VIEW)]
     public async Task<IActionResult> ProductAddPopup(string btnId, string productIdsInput)
     {
-        if (!await _permissionService.AuthorizeAsync(StandardPermissionProvider.ManageProducts))
-            return AccessDeniedView();
-
         //prepare model
         var model = await _productModelFactory.PrepareProductSearchModelAsync(new ProductSearchModel());
 
@@ -127,17 +130,13 @@ public class DiscountRulesHasAllProductsController : BasePluginController
     }
 
     [HttpPost]
+    [CheckPermission(StandardPermission.Catalog.PRODUCTS_VIEW)]
     public async Task<IActionResult> LoadProductFriendlyNames(string productIds)
     {
-        var result = "";
-
-        if (!await _permissionService.AuthorizeAsync(StandardPermissionProvider.ManageProducts))
-            return Json(new { Text = result });
-
         if (string.IsNullOrWhiteSpace(productIds))
-            return Json(new { Text = result });
+            return Json(new { Text = string.Empty });
 
-        var ids = new List<int>();
+        var parsedIds = new List<int>();
         var rangeArray = productIds
             .Split(_idsSeparator, StringSplitOptions.RemoveEmptyEntries)
             .Select(x => x.Trim())
@@ -155,26 +154,15 @@ public class DiscountRulesHasAllProductsController : BasePluginController
 
             //we do not display specified quantities and ranges
             //so let's parse only product names (before : sign)
-            if (productQuantityPair.Contains(':'))
+            if (productQuantityPair.Contains(_productQuantityPairSeparator))
                 temp = productQuantityPair.Split(_productQuantityPairSeparator, StringSplitOptions.RemoveEmptyEntries)[0];
 
             if (int.TryParse(temp, out var productId))
-                ids.Add(productId);
+                parsedIds.Add(productId);
         }
 
-        var products = await _productService.GetProductsByIdsAsync(ids.ToArray());
-        result = string.Join(", ", products.Select(p => p.Name));
-
-        return Json(new { Text = result });
-    }
-
-    #endregion
-
-    #region Utilities
-
-    private IEnumerable<string> GetErrorsFromModelState()
-    {
-        return ModelState.Values.SelectMany(v => v.Errors.Select(e => e.ErrorMessage));
+        var products = await _productService.GetProductsByIdsAsync(parsedIds.ToArray());
+        return Json(new { Text = string.Join(", ", products.Select(p => p.Name)) });
     }
 
     #endregion

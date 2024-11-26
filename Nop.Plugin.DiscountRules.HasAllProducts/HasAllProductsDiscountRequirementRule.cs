@@ -15,6 +15,9 @@ public partial class HasAllProductsDiscountRequirementRule : BasePlugin, IDiscou
 {
     #region Fields
 
+    private const char _idsSeparator = ',';
+    private const char _quantitySeparator = ':';
+    private const char _maxQuantityMaxseparator = '-';
     private readonly IActionContextAccessor _actionContextAccessor;
     private readonly IDiscountService _discountService;
     private readonly ILocalizationService _localizationService;
@@ -22,7 +25,6 @@ public partial class HasAllProductsDiscountRequirementRule : BasePlugin, IDiscou
     private readonly IShoppingCartService _shoppingCartService;
     private readonly IUrlHelperFactory _urlHelperFactory;
     private readonly IWebHelper _webHelper;
-    private static readonly char[] _separator = [','];
 
     #endregion
 
@@ -82,7 +84,7 @@ public partial class HasAllProductsDiscountRequirementRule : BasePlugin, IDiscou
         //3. The comma-separated list of product identifiers with quantity range.
         //      {Product ID}:{Min quantity}-{Max quantity}. For example, 77:1-3, 123:2-5, 156:3-8
         var restrictedProducts = restrictedProductIds
-            .Split(_separator, StringSplitOptions.RemoveEmptyEntries)
+            .Split(_idsSeparator, StringSplitOptions.RemoveEmptyEntries)
             .Select(x => x.Trim())
             .ToList();
         if (!restrictedProducts.Any())
@@ -104,19 +106,19 @@ public partial class HasAllProductsDiscountRequirementRule : BasePlugin, IDiscou
             var found1 = false;
             foreach (var sci in cart)
             {
-                if (restrictedProduct.Contains(':'))
+                if (restrictedProduct.Contains(_quantitySeparator))
                 {
-                    if (restrictedProduct.Contains('-'))
+                    if (restrictedProduct.Contains(_maxQuantityMaxseparator))
                     {
                         //the third way (the quantity rage specified)
                         //{Product ID}:{Min quantity}-{Max quantity}. For example, 77:1-3, 123:2-5, 156:3-8
-                        if (!int.TryParse(restrictedProduct.Split(':')[0], out var restrictedProductId))
+                        if (!int.TryParse(restrictedProduct.Split(_quantitySeparator)[0], out var restrictedProductId))
                             //parsing error; exit;
                             return result;
-                        if (!int.TryParse(restrictedProduct.Split(':')[1].Split('-')[0], out var quantityMin))
+                        if (!int.TryParse(restrictedProduct.Split(_quantitySeparator)[1].Split(_maxQuantityMaxseparator)[0], out var quantityMin))
                             //parsing error; exit;
                             return result;
-                        if (!int.TryParse(restrictedProduct.Split(':')[1].Split('-')[1], out var quantityMax))
+                        if (!int.TryParse(restrictedProduct.Split(_quantitySeparator)[1].Split(_maxQuantityMaxseparator)[1], out var quantityMax))
                             //parsing error; exit;
                             return result;
 
@@ -130,11 +132,11 @@ public partial class HasAllProductsDiscountRequirementRule : BasePlugin, IDiscou
                     {
                         //the second way (the quantity specified)
                         //{Product ID}:{Quantity}. For example, 77:1, 123:2, 156:3
-                        if (!int.TryParse(restrictedProduct.Split(':')[0], out var restrictedProductId))
+                        if (!int.TryParse(restrictedProduct.Split(_quantitySeparator)[0], out var restrictedProductId))
                             //parsing error; exit;
                             return result;
 
-                        if (!int.TryParse(restrictedProduct.Split(':')[1], out var quantity))
+                        if (!int.TryParse(restrictedProduct.Split(_quantitySeparator)[1], out var quantity))
                             //parsing error; exit;
                             return result;
 
@@ -187,7 +189,7 @@ public partial class HasAllProductsDiscountRequirementRule : BasePlugin, IDiscou
         var urlHelper = _urlHelperFactory.GetUrlHelper(_actionContextAccessor.ActionContext);
 
         return urlHelper.Action("Configure", "DiscountRulesHasAllProducts",
-            new { discountId = discountId, discountRequirementId = discountRequirementId }, _webHelper.GetCurrentRequestProtocol());
+            new { discountId, discountRequirementId }, _webHelper.GetCurrentRequestProtocol());
     }
 
     /// <summary>
@@ -221,9 +223,7 @@ public partial class HasAllProductsDiscountRequirementRule : BasePlugin, IDiscou
         var discountRequirements = (await _discountService.GetAllDiscountRequirementsAsync())
             .Where(discountRequirement => discountRequirement.DiscountRequirementRuleSystemName == DiscountRequirementDefaults.SYSTEM_NAME);
         foreach (var discountRequirement in discountRequirements)
-        {
             await _discountService.DeleteDiscountRequirementAsync(discountRequirement, false);
-        }
 
         //locales
         await _localizationService.DeleteLocaleResourcesAsync("Plugins.DiscountRules.HasAllProducts");
